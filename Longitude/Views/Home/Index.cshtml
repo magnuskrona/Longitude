@@ -1,4 +1,5 @@
 ﻿
+<div id="count" style="padding:10px;text-align: center; border:1px solid darkblue; z-index:1000; width:100px; height:50px; font-size:larger; color:darkblue; position:absolute; top:10px; right:10px;background: lightblue";opacity:0.7;></div>
 <div id="mapContainer"></div>
 
 <script type="text/x-template" id="map-template">
@@ -18,12 +19,17 @@
             var mapHub = $.connection.mapHub;
            
 
-            mapHub.client.send = function(lat, long) {
-                setPosition(lat, long);
+            mapHub.client.send = function(client, count) {
+                setPosition(client);
+                $("#count").html(count);
             };
-            ;
 
-
+            mapHub.client.init = function(clients) {
+                $.each(clients, function(index, client) {
+                    setPosition(client);
+                });
+                $("#count").html(clients.length);
+            };
 
             var apiKey = 'Ap_Zt5LDStQ384OLgQu9T5BdhRDNvjjrH01UZAucm_yHo9IYinzEOVVDIyGkfQIt';
             var map, infoBox, latitude, longitude, dataLayer, infoBoxLayer;
@@ -48,7 +54,8 @@
 
             var geoPositionOptions = {
                 enableHighAccuracy: false,
-                timeout:5000
+                timeout: 5000,
+                maximumAge: 6000000
             };
             
             function getPosition() {
@@ -88,19 +95,19 @@
 
             }
             
-            function showInfoBox(e) {console.log("!")
+            function showInfoBox(e) {
                 if (e.targetType == 'pushpin') {
                     infoBox.setLocation(e.target.getLocation());
                     infoBox.setOptions({ visible: true, title: e.target.Title, description: e.target.Description });
                 }
             }
             
-            function setPosition(lat, long) {
-                var myLocation = new Microsoft.Maps.Location(lat, long);
+            function setPosition(client) {
+                var location = new Microsoft.Maps.Location(client.Latitude, client.Longitude);
 
-                var pin = new Microsoft.Maps.Pushpin(myLocation, { title: 'Test' });
-                pin.Title = 'Pin!';
-                pin.Description = 'Pin Description';
+                var pin = new Microsoft.Maps.Pushpin(location, { title: client.Name });
+                pin.Title = client.Name;
+                pin.Description = client.Description;
                 
                 Microsoft.Maps.Events.addHandler(pin, 'click', showInfoBox);
                 
@@ -116,6 +123,7 @@
             
             $.connection.hub.start().then(function() {
                 getPosition();
+                
             });
             
 
