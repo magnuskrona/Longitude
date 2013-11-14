@@ -23,7 +23,7 @@ namespace Longitude.Hubs
         public override System.Threading.Tasks.Task OnConnected()
         {
             Clients.Caller.Init(_userMap.Values);
-            base.OnConnected();
+            return base.OnConnected();
         }
 
         public override System.Threading.Tasks.Task OnDisconnected()
