@@ -1,0 +1,124 @@
+﻿
+<div id="mapContainer"></div>
+
+<script type="text/x-template" id="map-template">
+    <div>
+        Test!
+    </div
+</script>
+
+@section scripts{
+    
+    <script src="~/signalr/hubs"></script>
+    <script charset="UTF-8" type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0"></script>
+
+    <script type="text/javascript">
+        $(function () {
+            
+            var mapHub = $.connection.mapHub;
+           
+
+            mapHub.client.send = function(lat, long) {
+                setPosition(lat, long);
+            };
+
+
+
+            var apiKey = 'Ap_Zt5LDStQ384OLgQu9T5BdhRDNvjjrH01UZAucm_yHo9IYinzEOVVDIyGkfQIt';
+            var map, infoBox, latitude, longitude, dataLayer, infoBoxLayer;
+            
+            function CreateMap() {
+                map = new Microsoft.Maps.Map(document.getElementById('mapContainer'), { credentials: apiKey, showDashboard: true, showScalebar: true });
+
+                dataLayer = new Microsoft.Maps.EntityCollection();
+                map.entities.push(dataLayer);
+                
+                infoBoxLayer = new Microsoft.Maps.EntityCollection();
+                map.entities.push(infoBoxLayer);
+
+                infoBox = new Microsoft.Maps.Infobox(new Microsoft.Maps.Location(0, 0), { visible: false, offset: new Microsoft.Maps.Point(0, 20) });
+                infoBoxLayer.push(infoBox);
+            }
+
+            function geoPositionError(error) {
+                console.log("ERROR!" + error.message);
+                
+            }
+
+            var geoPositionOptions = {
+                enableHighAccuracy: false,
+                timeout:1000
+            };
+            
+            function getPosition() {
+                
+                if (navigator.geolocation) {
+                    
+                    navigator.geolocation.getCurrentPosition(function (position) {
+                        
+                        latitude = position.coords.latitude;
+                        longitude = position.coords.longitude;
+
+                        //setPosition(latitude, longitude);
+
+                        mapHub.server.broadcastPosition(latitude, longitude);
+
+                    }, geoPositionError, geoPositionOptions);
+                }
+            }
+            
+            function getBestView() {
+                var locations = [];
+                
+                for (var i = 0; i < dataLayer.getLength(); i++) {
+                    
+                    var l = new Microsoft.Maps.Location(dataLayer.get(i).getLocation().latitude, dataLayer.get(i).getLocation().longitude);
+                    locations.push(l);
+                    
+                }
+                
+                if (locations.length > 1) {
+                    var bounds = Microsoft.Maps.LocationRect.fromLocations(locations);
+                    return { bounds: bounds }; 
+                } else {
+                    
+                    return { zoom: 10, center: locations[0] };
+                }
+
+            }
+            
+            function showInfoBox(e) {console.log("!")
+                if (e.targetType == 'pushpin') {
+                    infoBox.setLocation(e.target.getLocation());
+                    infoBox.setOptions({ visible: true, title: e.target.Title, description: e.target.Description });
+                }
+            }
+            
+            function setPosition(lat, long) {
+                var myLocation = new Microsoft.Maps.Location(lat, long);
+
+                var pin = new Microsoft.Maps.Pushpin(myLocation, { title: 'Test' });
+                pin.Title = 'Pin!';
+                pin.Description = 'Pin Description';
+                
+                Microsoft.Maps.Events.addHandler(pin, 'click', showInfoBox);
+                
+                var template = $("#map-template");
+                pin.html = template;
+                dataLayer.push(pin);
+                
+                
+                map.setView(getBestView());
+            }
+
+            CreateMap();
+            
+            $.connection.hub.start().then(function() {
+                getPosition();
+            });
+            
+
+            
+        })
+    </script>
+}
